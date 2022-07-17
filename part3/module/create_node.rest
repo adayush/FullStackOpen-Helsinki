@@ -1,0 +1,7 @@
+POST http://localhost:3001/api/notes
+Content-Type: application/json
+
+{
+    "content": "Who let the dogs out!",
+    "important": "WHO... WHO... WHO WHO"
+}
