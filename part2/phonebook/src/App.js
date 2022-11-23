@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import personService from './services/persons'
 
 const PersonForm = ({ newName, newNumber, handleInput, handleSubmit }) => (
   <form>
@@ -14,11 +15,12 @@ const PersonForm = ({ newName, newNumber, handleInput, handleSubmit }) => (
   </form>
 )
 
-const Persons = ({ persons, newFilter }) => (
+const Persons = ({ persons, newFilter, handleDelete }) => (
   <div>
     {persons.filter(person => person.name.toLowerCase().includes(newFilter.toLowerCase())).map(person =>
       <p key={person.name}>
         {person.name} {person.number}
+        <button onClick={() => handleDelete(person)}>delete</button>
       </p>
     )}
   </div>
@@ -31,26 +33,47 @@ const Filter = ({ newFilter, handleInput }) => (
 )
 
 const App = () => {
-  const [persons, setPersons] = useState([
-    { name: 'Arto Hellas',
-      number: '040-1234567',
-    }
-  ]) 
+  const [persons, setPersons] = useState([]) 
   const [newName, setNewName] = useState('')
   const [newNumber, setNewNumber] = useState('')
   const [newFilter, setNewFilter] = useState('')
 
+  useEffect(() => {
+    // axios
+    //   .get('http://localhost:3001/persons')
+    //   .then(response => {
+    //     setPersons(response.data)
+    //   })
+    personService
+      .getAll()
+      .then(initialPersons => setPersons(initialPersons))
+  }, [])
+
   const handleSubmit = (event) => {
     event.preventDefault()
-    if(checkExists() === undefined) {
+    const find = checkExists()
+    if(find === undefined) {
       const person = {
         name: newName,
         number: newNumber,
-        id: persons.length + 1
       }
-      setPersons(persons.concat(person))
+      // axios
+      //   .post('http://localhost:3001/persons', person)
+      //   .then(response => {
+      //     setPersons(persons.concat(response.data))
+      //   })
+      personService
+        .create(person)
+        .then(returnedPerson => {
+          setPersons(persons.concat(returnedPerson))
+        })
     } else {
-      alert(`${newName} is already added to phonebook`)
+      if (find.number !== newNumber && window.confirm((`${newName} is already added to phonebook, replace the old number with a new one?`)))
+        personService.update(find.id, {...find, number: newNumber}).then(() => {
+          personService
+            .getAll()
+            .then(initialPersons => setPersons(initialPersons))
+        })
     }
     setNewName('')
     setNewNumber('')
@@ -76,6 +99,15 @@ const App = () => {
     return persons.find(person => person.name === newName || person.number === newNumber)
   }
 
+  const handleDelete = person => {
+    if (window.confirm(`Delete ${person.name} ?`))
+      personService.remove(person.id).then(() => {
+        personService
+        .getAll()
+        .then(initialPersons => setPersons(initialPersons))
+      })
+  }
+
   return (
     <div>
       <h2>Phonebook</h2>
@@ -91,7 +123,7 @@ const App = () => {
       
       <h3>Numbers</h3>
       
-      <Persons persons={persons} newFilter={newFilter} />
+      <Persons persons={persons} newFilter={newFilter} handleDelete={handleDelete} />
     </div>
   )
 }
